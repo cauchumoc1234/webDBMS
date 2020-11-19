@@ -23,27 +23,19 @@ app.get('/', (req, res) => {
     res.render("home");
 })
 app.post("/search",(req,res)=>{
-    var query = "SELECT * FROM customers";
-    if(req.body.cusname){
-        query += " WHERE firstName LIKE '%" + req.body.cusname +"%' ";
-    }
-    if(req.body.city){
-        var city = "(SELECT * FROM `cities` WHERE `cityName` = '%"+ req.body.city + "%') "
-        query += " JOIN "+city +" c ON c.id = customers.cityID "
-    }
-    if(req.body.state){
-        var state = "(SELECT * FROM `states` WHERE `name` = '%"+ req.body.state + "%') "
-        query += " JOIN "+ state +" s ON c.id = customers.cityID "
-    }
-    if(query.search("LIMIT") < 0){
+    var query = "SELECT * FROM customers   JOIN (SELECT cities.* FROM cities JOIN (SELECT states.* FROM states JOIN (SELECT * FROM countries WHERE countries.name LIKE ?) ct ON 		states.country_id = ct.id WHERE states.name LIKE ?) s ON s.id = cities.state_id WHERE cities.cityName LIKE ?) c ON customers.cityID = c.id WHERE CONCAT(firstName , ' ' , lastName) LIKE ?  ";
+    var cusname = "%" + (req.body.cusname ? req.body.cusname : "") + "%";
+    var city = "%" + (req.body.city ? req.body.city : "") + "%";
+    var state = "%" + (req.body.state ? req.body.state : "") + "%";
+    var country = "%" + (req.body.country ? req.body.country : "") + "%";
+    if(!req.body.limit){
         query += " LIMIT 10";
     }
     else{
-        query += " LIMIT "+ req.body.limit;
+        query += " LIMIT " + req.body.limit
     }
-    connection.query(query,(error,results)=>{
+    connection.query(query,[country,state,city,cusname],(error,results)=>{
         if (error) throw error;
         res.send(results);
     })
-    // res.send(query)
 })
